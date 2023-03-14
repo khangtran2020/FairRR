@@ -84,22 +84,14 @@ def read_adult(args):
     feature_cols.remove('sex')
     label = 'income'
     z = 'sex'
-    if args.mode == 'func':
-        all_data = minmax_scale(df=all_data, cols=feature_cols)
-        all_data['bias'] = 1.0
-        feature_cols.append('bias')
     train_df = all_data[:train_df.shape[0]].reset_index(drop=True)
     test_df = all_data[train_df.shape[0]:].reset_index(drop=True)
     male_df = train_df[train_df['sex'] == 1].copy().reset_index(drop=True)
     female_df = train_df[train_df['sex'] == 0].copy().reset_index(drop=True)
     fold_separation(male_df, args.folds, feature_cols, label)
     fold_separation(female_df, args.folds, feature_cols, label)
-    if args.mode == 'ratio':
-        male_df, female_df = choose_data(args=args, df_0=male_df, df_1=female_df)
-        train_df = pd.concat([male_df, female_df], axis=0).sample(frac=1).reset_index(drop=True)
-    else:
-        train_df = pd.concat([male_df, female_df], axis=0).reset_index(drop=True)
-    return train_df, test_df, male_df, female_df, feature_cols, label, z
+    train_df = pd.concat([male_df, female_df], axis=0).reset_index(drop=True)
+    return train_df, test_df, feature_cols, label, z
 
 def read_bank(args):
     # 3305
@@ -112,23 +104,14 @@ def read_bank(args):
     feature_cols.remove('intercept')
     label = 'y'
     z = 'z'
-    if args.mode == 'func':
-        df = minmax_scale(df=df, cols=feature_cols)
-        df['bias'] = 1.0
-        feature_cols.append('bias')
     train_df = df[df['is_train'] == 1].reset_index(drop=True)
     test_df = df[df['is_train'] == 0].reset_index(drop=True)
     male_df = train_df[train_df['z'] == 1].copy().reset_index(drop=True)
     female_df = train_df[train_df['z'] == 0].copy().reset_index(drop=True)
-
     fold_separation(male_df, args.folds, feature_cols, label)
     fold_separation(female_df, args.folds, feature_cols, label)
-    if args.mode == 'ratio':
-        male_df, female_df = choose_data(args=args, df_0=male_df, df_1=female_df)
-        train_df = pd.concat([male_df, female_df], axis=0).sample(frac=1).reset_index(drop=True)
-    else:
-        train_df = pd.concat([male_df, female_df], axis=0).reset_index(drop=True)
-    return train_df, test_df, male_df, female_df, feature_cols, label, z
+    train_df = pd.concat([male_df, female_df], axis=0).reset_index(drop=True)
+    return train_df, test_df, feature_cols, label, z
 
 def read_abalone(args):
     # 1436
@@ -141,22 +124,14 @@ def read_abalone(args):
     feature_cols.remove('is_train')
     label = 'y'
     z = 'z'
-    if args.mode == 'func':
-        df = minmax_scale(df=df, cols=feature_cols)
-        df['bias'] = 1.0
-        feature_cols.append('bias')
     train_df = df[df['is_train'] == 1].reset_index(drop=True)
     test_df = df[df['is_train'] == 0].reset_index(drop=True)
     male_df = train_df[train_df['z'] == 1].copy().reset_index(drop=True)
     female_df = train_df[train_df['z'] == 0].copy().reset_index(drop=True)
     fold_separation(male_df, args.folds, feature_cols, label)
     fold_separation(female_df, args.folds, feature_cols, label)
-    if args.mode == 'ratio':
-        male_df, female_df = choose_data(args=args, df_0=male_df, df_1=female_df)
-        train_df = pd.concat([male_df, female_df], axis=0).sample(frac=1).reset_index(drop=True)
-    else:
-        train_df = pd.concat([male_df, female_df], axis=0).reset_index(drop=True)
-    return train_df, test_df, male_df, female_df, feature_cols, label, z
+    train_df = pd.concat([male_df, female_df], axis=0).reset_index(drop=True)
+    return train_df, test_df, feature_cols, label, z
 
 def read_utk(args):
     df = pd.read_csv('Data/UTK/feat.zip', compression='zip')
@@ -166,22 +141,14 @@ def read_utk(args):
     feature_cols.remove('is_train')
     label = 'gender'
     z = 'ethnicity'
-    if args.mode == 'func':
-        df = minmax_scale(df=df, cols=feature_cols)
-        df['bias'] = 1.0
-        feature_cols.append('bias')
     train_df = df[df['is_train'] == 1].reset_index(drop=True)
     test_df = df[df['is_train'] == 0].reset_index(drop=True)
     male_df = train_df[train_df['ethnicity'] == 1].copy().reset_index(drop=True)
     female_df = train_df[train_df['ethnicity'] == 0].copy().reset_index(drop=True)
     fold_separation(male_df, args.folds, feature_cols, label)
     fold_separation(female_df, args.folds, feature_cols, label)
-    if args.mode == 'ratio':
-        male_df, female_df = choose_data(args=args, df_0=male_df, df_1=female_df)
-        train_df = pd.concat([male_df, female_df], axis=0).sample(frac=1).reset_index(drop=True)
-    else:
-        train_df = pd.concat([male_df, female_df], axis=0).reset_index(drop=True)
-    return train_df, test_df, male_df, female_df, feature_cols, label, z
+    train_df = pd.concat([male_df, female_df], axis=0).reset_index(drop=True)
+    return train_df, test_df, feature_cols, label, z
 
 def fold_separation(train_df, folds, feat_cols, label):
     skf = StratifiedKFold(n_splits=folds)
@@ -194,27 +161,6 @@ def minmax_scale(df, cols):
     for col in cols:
         df[col] = scaler.fit_transform(df[col].values.reshape(-1, 1))
     return df
-
-def choose_data(args, df_0, df_1):
-    # print(len(df_0),len(df_1))
-    if len(df_0) > len(df_1):
-        df = df_1.copy()
-        df_1 = df_0.copy()
-        df_0 = df.copy()
-        del (df)
-
-    df_0 = df_0.reset_index(drop=True)
-    df_1 = df_1.reset_index(drop=True)
-
-    num_pt = int(args.ratio * len(df_0))
-    if num_pt > len(df_1):
-        print('Can not achieve that rate between group0 and group1')
-        args.can_ratio = False
-        return df_0.reset_index(drop=True), df_1.reset_index(drop=True)
-    else:
-        idx = np.random.choice(np.arange(len(df_1)), size=num_pt, replace=False)
-        df_1 = df_1.iloc[idx, :].copy()
-        return df_0.reset_index(drop=True), df_1.reset_index(drop=True)
 
 def get_UTK(args):
     utk_data_path = "Data/UTK/age_gender.gz"

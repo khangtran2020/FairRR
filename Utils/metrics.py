@@ -73,6 +73,52 @@ def equality_of_odd(male_loader, female_loader, model, device):
     male_outputs = np.round(np.array(male_outputs))
     tn, fp, fn, tp = confusion_matrix(male_target, male_outputs).ravel()
     male_tpr = tp / (tp + fn)
+    male_fpr = fp / (fp + tn)
+    female_outputs = np.round(np.array(female_outputs))
+    tn, fp, fn, tp = confusion_matrix(female_target, female_outputs).ravel()
+    female_tpr = tp / (tp + fn)
+    female_fpr = fp / (fp + tn)
+    return male_tpr, female_tpr, max(np.abs(male_tpr - female_tpr), np.abs(male_fpr - female_fpr))
+
+def equality_of_opp(male_loader, female_loader, model, device):
+    model.to(device)
+    male_outputs = []
+    male_target = []
+    female_outputs = []
+    female_target = []
+
+    model.eval()
+    with torch.no_grad():
+
+        for bi, d in enumerate(male_loader):
+            features, target, _ = d
+
+            features = features.to(device, dtype=torch.float)
+            target = target.to(device, dtype=torch.float)
+
+            outputs = model(features)
+            # if outputs.size(dim=0) > 1:
+            outputs = torch.squeeze(outputs, dim=-1)
+            outputs = outputs.cpu().detach().numpy()
+            male_outputs.extend(outputs)
+            male_target.extend(target.cpu().detach().numpy().astype(int).tolist())
+
+        for bi, d in enumerate(female_loader):
+            features, target, _ = d
+
+            features = features.to(device, dtype=torch.float)
+            target = target.to(device, dtype=torch.float)
+
+            outputs = model(features)
+            # if outputs.size(dim=0) > 1:
+            outputs = torch.squeeze(outputs, dim=-1)
+            outputs = outputs.cpu().detach().numpy()
+            female_outputs.extend(outputs)
+            female_target.extend(target.cpu().detach().numpy().astype(int).tolist())
+
+    male_outputs = np.round(np.array(male_outputs))
+    tn, fp, fn, tp = confusion_matrix(male_target, male_outputs).ravel()
+    male_tpr = tp / (tp + fn)
     female_outputs = np.round(np.array(female_outputs))
     tn, fp, fn, tp = confusion_matrix(female_target, female_outputs).ravel()
     female_tpr = tp / (tp + fn)

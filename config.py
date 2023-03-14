@@ -18,8 +18,10 @@ def add_data_group(group):
     group.add_argument('--dataset', type=str, default='adult', help="name of dataset")
     group.add_argument('--folds', type=int, default=5, help='number of folds for cross-validation')
     group.add_argument('--sampling_rate', type=float, default=0.08, help="batch size for training process")
-    group.add_argument('--ratio', type=float, default=0.5,
-                       help="ratio group0/group1 where group 0 always has less data points compare to group 1")
+    group.add_argument('--ratio', type=float, default=0.5, help="ratio group0/group1")
+    group.add_argument('--max_val', type=float, default=1.0, help="maximum value for dataset")
+    group.add_argument('--min_val', type=float, default=1.0, help="minimum value for dataset")
+    group.add_argument('--num_class', type=int, default=2, help="label space")
 
 def add_model_group(group):
     group.add_argument("--model_type", type=str, default='NormNN', help="Model type")
@@ -32,6 +34,9 @@ def add_model_group(group):
     group.add_argument("--patience", type=int, default=8, help='early stopping')
     group.add_argument("--num_workers", type=int, default=0)
 
+def add_fairrr_group(group):
+    group.add_argument("--num_bit", type=int, default=5, help='clipping gradient bound')
+    group.add_argument("--num_int", type=int, default=2, help="targeted epsilon")
 
 def add_dp_group(group):
     group.add_argument("--clip", type=float, default=1.0, help='clipping gradient bound')
@@ -43,7 +48,6 @@ def add_dp_group(group):
     group.add_argument("--confidence", type=float, default=0.95, help='Confidence rate')
     group.add_argument("--lamda", type=float, default=1.0, help="regularizer")
     group.add_argument("--S", type=float, default=0.03, help='clipping bound for DPSGDF')
-
 
 def add_pgd_group(group):
     group.add_argument("--eps_pgd", type=float, default=0.3, help="adversarial radius")
