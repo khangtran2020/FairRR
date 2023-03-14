@@ -1,6 +1,5 @@
 import argparse
 
-
 def add_general_group(group):
     group.add_argument("--save_path", type=str, default="results/models/", help="dir path for saving model file")
     group.add_argument("--res_path", type=str, default="results/dict/", help="dir path for output file")

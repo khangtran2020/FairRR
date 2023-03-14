@@ -98,7 +98,6 @@ class ReduceOnPlatau:
             self.counter = 0
         return self.args
 
-
 def train_fn(dataloader, model, criterion, optimizer, device, scheduler):
     model.to(device)
     model.train()
@@ -132,7 +131,6 @@ def train_fn(dataloader, model, criterion, optimizer, device, scheduler):
         train_outputs.extend(output)
 
     return train_loss, train_outputs, train_targets
-
 
 def eval_fn(data_loader, model, criterion, device):
     model.to(device)
