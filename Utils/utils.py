@@ -82,20 +82,20 @@ def init_data(args, fold, train_df, test_df):
     df_train = train_df[train_df.fold != fold]
     df_valid = train_df[train_df.fold == fold]
 
+    train_idx = list(df_train.index)
+    valid_idx = list(df_train.index)
     train_mal_idx = list(male_df[male_df.fold != fold].index)
     valid_mal_idx = list(male_df[male_df.fold == fold].index)
     train_fem_idx = list(female_df[female_df.fold != fold].index)
     valid_fem_idx = list(female_df[female_df.fold == fold].index)
 
 
-    x_train, y_train, z_train = (df_train[args.feature].values, df_train[args.target].values, df_train[args.z].values)
-    x_val, y_val, z_val = (df_valid[args.feature].values, df_valid[args.target].values, df_valid[args.z].values)
+    x_train, y_train, z_train = (train_df[args.feature].values, train_df[args.target].values, train_df[args.z].values)
     x_test, y_test, z_test = (test_df[args.feature].values, test_df[args.target].values, test_df[args.z].values)
 
     if args.mode == 'fairrr':
         print('='*10 + ' Applying FairRR ' + '='*10)
         x_train = fairRR(args=args, arr=x_train, y=y_train, z=z_train)
-        x_val = fairRR(args=args, arr=x_val, y=y_val, z=z_val)
         x_test = fairRR(args=args, arr=x_test, y=y_test, z=z_test)
         print('=' *10 + ' Done FairRR ' + '=' * 10)
 
@@ -125,15 +125,15 @@ def init_data(args, fold, train_df, test_df):
     )
 
     train_dataset = Data(
-        X=x_train,
-        y=y_train,
-        ismale=z_train
+        X=x_train[train_idx, :],
+        y=y_train[train_idx],
+        ismale=z_train[train_idx]
     )
 
     valid_dataset = Data(
-        X=x_val,
-        y=y_val,
-        ismale=z_val
+        X=x_train[valid_idx, :],
+        y=y_train[valid_idx],
+        ismale=z_train[valid_idx]
     )
 
     test_dataset = Data(
