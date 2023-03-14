@@ -75,7 +75,7 @@ def init_model(args):
 
 
 def init_data(args, fold, train_df, test_df):
-    train_df, test_df = normalize_date(args=args, train_df=train_df, test_df=test_df)
+    train_df, test_df = normalize_data(args=args, train_df=train_df, test_df=test_df)
     male_df = train_df[train_df[args.z] == 1]
     female_df = train_df[train_df[args.z] == 0]
 
@@ -233,12 +233,12 @@ def get_grad_vec(model, device, requires_grad=False):
     return sum_var
 
 
-def normalize_date(args, train_df, test_df):
+def normalize_data(args, train_df, test_df):
     all_data = pd.concat([train_df, test_df], axis=0)
     if args.dataset != 'adult':
         minmax_scaler = MinMaxScaler()
         for col in args.feature:
-            all_data[col] = minmax_scaler.fit_transform(all_data[col].values.reshape(1, -1))
+            all_data[col] = minmax_scaler.fit_transform(all_data[col].values)
     train_df = all_data[:train_df.shape[0]]
-    test_df = all_data[train_df:]
+    test_df = all_data[train_df.shape[0]:]
     return train_df, test_df
