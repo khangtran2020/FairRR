@@ -20,7 +20,7 @@ def run_fair_eval(fold, train_df, test_df, args, device, current_time):
 
     # Defining LR SCheduler
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max',
-                                                           factor=0.1, patience=10, verbose=True,
+                                                           factor=0.1, patience=15, verbose=True,
                                                            threshold=0.0001, threshold_mode='rel',
                                                            cooldown=0, min_lr=1e-4, eps=1e-08)
 
