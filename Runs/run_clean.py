@@ -66,7 +66,7 @@ def run_fair_eval(fold, train_df, test_df, args, device, current_time):
         test_acc = performace_eval(args, test_targets, test_outputs)
         acc_score = performace_eval(args, targets, outputs)
 
-        # scheduler.step(acc_score)
+        scheduler.step(acc_score)
         # scheduler_male.step(male_acc_score)
         # scheduler_female.step(female_acc_score)
 
@@ -83,7 +83,11 @@ def run_fair_eval(fold, train_df, test_df, args, device, current_time):
         history['equal_opp'].append(equal_opp)
         history['test_history_loss'].append(test_loss)
         history['test_history_acc'].append(test_acc)
-        torch.save(model.state_dict(), args.save_path + model_name)
+
+        es(epoch=epoch, epoch_score=acc_score, model=model, model_path=args.save_path + model_name)
+        if es.early_stop:
+            print('Maximum Patience {} Reached , Early Stopping'.format(args.patience))
+            break
 
     # print_history_fair(fold, history, epoch + 1, args, current_time)
     save_res(fold=fold, args=args, dct=history, current_time=current_time)
