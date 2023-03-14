@@ -1,5 +1,5 @@
 import numpy as np
-from Utils.utils import softmax, sigmoid
+from Utils.utils import *
 from sklearn.metrics import mutual_info_score
 
 
