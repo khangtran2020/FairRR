@@ -58,14 +58,16 @@ def fairRR(args, arr, y, z):
     p = np.expand_dims(a=p, axis=0)
     p = np.repeat(a=p, repeats=feat.shape[0], axis=0)
     print("Shape of matrix:", p.shape, feat.shape)
-    return
     p_temp = np.random.rand(p.shape[0], p.shape[1])
     perturb = (p_temp > p).astype(int)
 
     perturb_feat = (perturb + feat) % 2
-    perturb_feat = np.apply_along_axis(join_string, 1, perturb_feat)
-    # print(perturb_feat)
-    return binary_to_float_vec(perturb_feat)
+    if args.dataset != 'adult':
+        perturb_feat = np.apply_along_axis(join_string, 1, perturb_feat)
+        perturb_feat = binary_to_float_vec(perturb_feat)
+    else:
+        perturb_feat = perturb
+    return perturb_feat
 
 
 def cal_mi(x, y, z):
