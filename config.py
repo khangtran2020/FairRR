@@ -61,6 +61,7 @@ def parse_args():
     model_group = parser.add_argument_group(title="Model-related configuration")
     general_group = parser.add_argument_group(title="General configuration")
     dp_group = parser.add_argument_group(title="Differential privacy configuration")
+    fairrr_group = parser.add_argument_group(title="FairRR configuration")
     pgd_group = parser.add_argument_group(title="projected gradient descent configuration")
 
     add_data_group(data_group)
@@ -68,5 +69,6 @@ def parse_args():
     add_general_group(general_group)
     add_dp_group(dp_group)
     add_pgd_group(pgd_group)
+    add_fairrr_group(fairrr_group)
 
     return parser.parse_args()
