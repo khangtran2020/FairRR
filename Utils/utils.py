@@ -146,7 +146,7 @@ def init_data(args, fold, train_df, test_df):
     # sampler_male = torch.utils.data.RandomSampler(train_male_dataset, replacement=False)
     train_male_loader = DataLoader(
         train_male_dataset,
-        batch_size=int(args.sampling_rate * len(train_male_dataset)),
+        batch_size=args.batch_size,
         pin_memory=True,
         drop_last=True,
         num_workers=0
@@ -155,7 +155,7 @@ def init_data(args, fold, train_df, test_df):
     # sampler_female = torch.utils.data.RandomSampler(train_female_dataset, replacement=False)
     train_female_loader = DataLoader(
         train_female_dataset,
-        batch_size=int(args.sampling_rate * len(train_female_dataset)),
+        batch_size=args.batch_size,
         pin_memory=True,
         drop_last=True,
         num_workers=0
@@ -180,7 +180,7 @@ def init_data(args, fold, train_df, test_df):
     )
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=int(args.sampling_rate * len(train_dataset)),
+        batch_size=args.batch_size,
         num_workers=0,
         shuffle=True,
         pin_memory=True,
