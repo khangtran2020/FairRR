@@ -26,15 +26,6 @@ def seed_everything(seed):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
 
-
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-
-
-def softmax(x):
-    return np.exp(x) / np.sum(np.exp(x))
-
-
 def weights_init_normal(m):
     classname = m.__class__.__name__
     if classname.find("Conv") != -1:

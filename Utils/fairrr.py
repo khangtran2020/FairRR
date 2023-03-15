@@ -2,6 +2,13 @@ import numpy as np
 from Utils.utils import *
 from sklearn.metrics import mutual_info_score
 
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
+def softmax(x):
+    return np.exp(x) / np.sum(np.exp(x))
+
 
 def fairRR(args, arr, y, z):
     r = arr.shape[1]
