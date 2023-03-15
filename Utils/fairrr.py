@@ -56,7 +56,8 @@ def fairRR(args, arr, y, z):
     eps = softmax(mi_label - args.alpha*mi_protect)*args.tar_eps
     p = sigmoid(eps)
     p = np.repeat(a=p, repeats=feat.shape[0], axis=0)
-    assert(p.shape[0] == feat.shape[0] and p.shape[1] == feat.shape[1])
+    print(p.shape, feat.shape)
+    return
     p_temp = np.random.rand(p.shape[0], p.shape[1])
     perturb = (p_temp > p).astype(int)
 
