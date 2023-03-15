@@ -55,7 +55,8 @@ def fairRR(args, arr, y, z):
     mi_protect, mi_label = cal_mi(x=feat, y=y, z=z)
     eps = softmax(mi_label - args.alpha*mi_protect)*args.tar_eps
     p = sigmoid(eps)
-    p = np.repeat(a=p, repeats=feat.shape[0], axis=0)
+    print(p.shape)
+    p = np.repeat(a=p, repeats=(feat.shape[0], 1), axis=0)
     print("Shape of matrix:", p.shape, feat.shape)
     return
     p_temp = np.random.rand(p.shape[0], p.shape[1])
