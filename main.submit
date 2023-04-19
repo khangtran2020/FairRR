@@ -1,0 +1,16 @@
+############
+#
+# Example submit file for vanilla job
+#
+############
+getenv = True
+request_cpus = 2
+Requirements = CUDACapability == 7.5 && CUDADriverVersion == 11.6
++request_gpus = 2
+Universe       = vanilla
+Executable     = main.sh
+Arguments      = $(mode) $(dataset) $(lr) $(batchsize) $(modeltype) $(epochs) $(tareps)
+input   = /dev/null
+output  = main.out
+error   = main.error
+Queue mode,dataset,lr,batchsize,modeltype,epochs,tareps from main.in

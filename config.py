@@ -31,7 +31,7 @@ def add_model_group(group):
     group.add_argument("--alpha", type=float, default=0.05)
     group.add_argument("--optimizer", type=str, default='adamw')
     group.add_argument("--epochs", type=int, default=100, help='training step')
-    group.add_argument("--patience", type=int, default=8, help='early stopping')
+    group.add_argument("--patience", type=int, default=30, help='early stopping')
     group.add_argument("--num_workers", type=int, default=0)
 
 def add_fairrr_group(group):

@@ -70,3 +70,23 @@ class CNN(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.sigmoid(self.fc3(x))
         return x
+    
+class SimpleCNN(nn.Module):
+    def __init__(self, n_channel, n_hidden, num_out):
+        super(SimpleCNN, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=n_channel, out_channels=16, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=4, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(in_features=n_hidden, out_features=256)
+        self.fc2 = nn.Linear(in_features=256, out_features=128)
+        self.fc3 = nn.Linear(in_features=128, out_features=num_out)
+
+    def forward(self, x):
+        print(x.shape)
+        x = F.relu(F.max_pool2d(self.conv1(x), kernel_size=3, stride=2, padding=1))
+        x = F.relu(F.max_pool2d(self.conv2(x), kernel_size=3, stride=2, padding=1))
+        x = torch.flatten(x, start_dim=1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+
+        return x

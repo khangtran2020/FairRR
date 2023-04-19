@@ -1,0 +1,10 @@
+fairrr,adult,0.001,32,Logit,250,0.5
+fairrr,adult,0.001,32,Logit,250,0.75
+fairrr,adult,0.001,32,Logit,250,1
+fairrr,adult,0.001,32,Logit,250,3
+fairrr,adult,0.001,32,Logit,250,5
+fairrr,utk,0.001,64,SimpleCNN,250,0.5
+fairrr,utk,0.001,64,SimpleCNN,250,0.75
+fairrr,utk,0.001,64,SimpleCNN,250,1
+fairrr,utk,0.001,64,SimpleCNN,250,3
+fairrr,utk,0.001,64,SimpleCNN,250,5
