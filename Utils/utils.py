@@ -63,6 +63,9 @@ def init_model(args):
         return Logit(args.input_dim, args.n_hid, args.output_dim)
     elif args.model_type == 'CNN':
         return CNN(args.input_dim, args.n_hid, args.output_dim)
+    elif args.model_type == 'SimpleCNN':
+        print(args.input_dim, args.n_hid, args.output_dim)
+        return SimpleCNN(args.input_dim, args.n_hid, args.output_dim)
 
 
 def init_data(args, fold, train_df, test_df):
@@ -74,7 +77,7 @@ def init_data(args, fold, train_df, test_df):
     df_valid = train_df[train_df.fold == fold]
 
     train_idx = list(df_train.index)
-    valid_idx = list(df_train.index)
+    valid_idx = list(df_valid.index)
     train_mal_idx = list(male_df[male_df.fold != fold].index)
     valid_mal_idx = list(male_df[male_df.fold == fold].index)
     train_fem_idx = list(female_df[female_df.fold != fold].index)
@@ -90,6 +93,9 @@ def init_data(args, fold, train_df, test_df):
         x_test = fairRR(args=args, arr=x_test, y=y_test, z=z_test)
         print('=' *10 + ' Done FairRR ' + '=' * 10)
 
+    print("Len x_train", len(x_train))
+    print("Len x_test", len(x_test))
+    
     # Defining DataSet
     train_male_dataset = Data(
         X=x_train[train_mal_idx, :],
@@ -229,7 +235,8 @@ def normalize_data(args, train_df, test_df):
     if args.dataset != 'adult':
         minmax_scaler = MinMaxScaler()
         for col in args.feature:
-            all_data[col] = minmax_scaler.fit_transform(all_data[col].values)
+            all_data[col] = minmax_scaler.fit_transform(all_data[col].values.reshape(-1, 1))
+        # all_data = minmax_scaler.fit_transform(all_data.values)
     train_df = all_data[:train_df.shape[0]]
     test_df = all_data[train_df.shape[0]:]
     return train_df, test_df

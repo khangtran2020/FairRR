@@ -91,3 +91,4 @@ def run_fair_eval(fold, train_df, test_df, args, device, current_time):
 
     # print_history_fair(fold, history, epoch + 1, args, current_time)
     save_res(fold=fold, args=args, dct=history, current_time=current_time)
+    theorem_3_4(history, args)

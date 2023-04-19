@@ -78,3 +78,22 @@ def print_history_fair(fold, history, num_epochs, args, current_time):
     axs[2].set_xlabel('Epochs', size=14)
     axs[2].set_title(f'FOLD {fold + 1}', size=18)
     plt.savefig(save_name)
+
+def theorem_3_4(history, args):
+
+    print(f"SEED #{args.seed}, EPS {args.tar_eps}, DATASET {args.dataset}")
+    
+    print("DP : ", history['demo_parity'])
+    yy = history['demo_parity'][-1]
+    xx = (np.exp(args.tar_eps - 1) / np.exp(args.tar_eps + 1)) ** 2
+    print(f"DP : {yy} <= {xx}")
+    
+    print("EQUAL OPP : ", history['equal_opp'])
+    yy = history['equal_opp'][-1]
+    xx = (np.exp(args.tar_eps - 1) / np.exp(args.tar_eps + 1)) ** 2
+    print(f"Equal Opp : {yy} <= {xx}")
+
+    print("EQUAL ODD : ", history['equal_odd'])
+    yy = history['equal_odd'][-1]
+    xx = (np.exp(args.tar_eps - 1) / np.exp(args.tar_eps + 1)) ** 2
+    print(f"Equal Odd : {yy} <= {xx}")

@@ -12,6 +12,8 @@ def softmax(x):
 
 def fairRR(args, arr, y, z):
     r = arr.shape[1]
+    print("Len y : ", len(y))
+    print("Len z : ", len(z))
 
     def float_to_binary(x, m=args.num_int, n=args.num_bit - args.num_int - 1):
         x_abs = np.abs(x)
@@ -53,10 +55,22 @@ def fairRR(args, arr, y, z):
     else:
         feat = arr
     mi_protect, mi_label = cal_mi(x=feat, y=y, z=z)
-    # eps = softmax(mi_label - args.alpha*mi_protect)*args.tar_eps
-    p = sigmoid(args.tar_eps/r)*np.ones(feat.shape)
-    # p = np.expand_dims(a=p, axis=0)
-    # p = np.repeat(a=p, repeats=feat.shape[0], axis=0)
+    print("mi_label : ", mi_label)
+    print("mi_protect :", mi_protect)
+    eps = softmax(mi_label - args.alpha*mi_protect)
+    print("Eps : ", eps)
+    # args.tar_eps = eps
+    print("Eps sum : ", np.sum(eps))
+    p = sigmoid(eps)
+    
+    # *args.tar_eps
+    # eps = np.exp()
+    
+    # p = sigmoid(args.tar_eps/r)*np.ones(feat.shape)
+    
+    
+    p = np.expand_dims(a=p, axis=0)
+    p = np.repeat(a=p, repeats=feat.shape[0], axis=0)
     print("Shape of matrix:", p.shape, feat.shape)
     p_temp = np.random.rand(p.shape[0], p.shape[1])
     perturb = (p_temp > p).astype(int)
@@ -67,6 +81,8 @@ def fairRR(args, arr, y, z):
         perturb_feat = binary_to_float_vec(perturb_feat)
     else:
         perturb_feat = perturb
+
+    print("Perturb feat : ", perturb_feat)
     return perturb_feat
 
 
