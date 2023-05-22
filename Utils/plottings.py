@@ -24,29 +24,6 @@ def print_history_fair(fold, history, num_epochs, args, current_time):
         color='#1f77b4'
     )
 
-    # axs[0].plot(
-    #     np.arange(num_epochs),
-    #     history['test_history_acc'],
-    #     ':*',
-    #     label='Test ACC',
-    #     color='deeppink'
-    # )
-
-    # x = np.argmax(history['val_history_acc'])
-    # y = np.max(history['val_history_acc'])
-    #
-    # xdist = axs[0].get_xlim()[1] - axs[0].get_xlim()[0]
-    # ydist = axs[0].get_ylim()[1] - axs[0].get_ylim()[0]
-    #
-    # # axs[0].scatter(x, y, s=200, color='#1f77b4')
-    # #
-    # # axs[0].text(
-    # #     x - 0.03 * xdist,
-    # #     y - 0.13 * ydist,
-    # #     'max acc\n%.2f' % y,
-    # #     size=14
-    # # )
-
     axs[0].set_ylabel('ACC', size=14)
     axs[0].set_xlabel('Epoch', size=14)
     axs[0].set_title(f'FOLD {fold + 1}', size=18)

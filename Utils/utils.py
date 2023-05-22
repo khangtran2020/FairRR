@@ -11,12 +11,10 @@ import pandas as pd
 from Utils.fairrr import fairRR
 
 
-def save_res(fold, args, dct, current_time):
-    name = get_name(args=args, current_date=current_time, fold=fold)
+def save_res(args, dct, name):
     save_name = args.res_path + name
     with open('{}.pkl'.format(save_name), 'wb') as f:
         pickle.dump(dct, f)
-
 
 def seed_everything(seed):
     random.seed(seed)
@@ -26,217 +24,123 @@ def seed_everything(seed):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
 
-def weights_init_normal(m):
-    classname = m.__class__.__name__
-    if classname.find("Conv") != -1:
-        torch.nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find("BatchNorm") != -1:
-        torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
-        torch.nn.init.constant_(m.bias.data, 0.0)
-    elif classname.find('Linear') != -1:
-        torch.nn.init.normal_(m.weight.data, 0.0, 0.2)
-        torch.nn.init.constant_(m.bias.data, 0)
 
-
-def get_name(args, current_date, fold):
-    return '{}_{}_fold_{}_metric_{}_eps_{}_epochs_{}_{}-{}-{}_{}-{}-{}'.format(args.dataset,
-                                                                               args.mode, fold,
-                                                                               args.performance_metric,
-                                                                               args.tar_eps,
-                                                                               args.epochs,
-                                                                               current_date.day,
-                                                                               current_date.month,
-                                                                               current_date.year,
-                                                                               current_date.hour,
-                                                                               current_date.minute,
-                                                                               current_date.second)
-
+def get_name(args, current_date, fold=0):
+    dataset_str = f'{args.dataset}_run_{args.seed}_{fold}_{args.ratio}_'
+    date_str = f'{current_date.day}-{current_date.month}-{current_date.year}_{current_date.hour}-{current_date.minute}-{current_date.second}'
+    model_str = f'{args.mode}_{args.submode}_{args.epochs}_{args.performance_metric}_{args.optimizer}_{args.model_type}_'
+    dp_str = f'eps_{args.tar_eps}_'
+    if args.mode in ['clean']:
+        res_str = dataset_str + model_str + date_str
+    else:
+        res_str = dataset_str + model_str + dp_str + date_str
+    return res_str
 
 def init_model(args):
     if args.model_type == 'NormNN':
-        return NormNN(args.input_dim, args.n_hid, args.output_dim)
+        return NormNN(args.input_dim, args.n_hid, args.output_dim, n_layer=args.n_layer, dropout=None)
     elif args.model_type == 'NN':
-        return NeuralNetwork(args.input_dim, args.n_hid, args.output_dim)
-    elif args.model_type == 'Logit':
-        return NormLogit(args.input_dim, args.n_hid, args.output_dim)
-    elif args.model_type == 'LogitSmooth':
-        return Logit(args.input_dim, args.n_hid, args.output_dim)
-    elif args.model_type == 'CNN':
-        return CNN(args.input_dim, args.n_hid, args.output_dim)
+        return NN(args.input_dim, args.n_hid, args.output_dim, n_layer=args.n_layer)
     elif args.model_type == 'SimpleCNN':
         print(args.input_dim, args.n_hid, args.output_dim)
         return SimpleCNN(args.input_dim, args.n_hid, args.output_dim)
 
 
-def init_data(args, fold, train_df, test_df):
-    train_df, test_df = normalize_data(args=args, train_df=train_df, test_df=test_df)
-    male_df = train_df[train_df[args.z] == 1]
-    female_df = train_df[train_df[args.z] == 0]
+def init_data(args, fold, train, test):
+    mal_tr_df, fem_tr_df = train
+    test_df, mal_te_df, fem_te_df = test
 
-    df_train = train_df[train_df.fold != fold]
-    df_valid = train_df[train_df.fold == fold]
+    df_train_mal = mal_tr_df[mal_tr_df.fold != fold]
+    df_train_fem = fem_tr_df[fem_tr_df.fold != fold]
+    df_val_mal = mal_tr_df[mal_tr_df.fold == fold]
+    df_val_fem = fem_tr_df[fem_tr_df.fold == fold]
+    df_train = pd.concat([df_train_mal, df_train_fem], axis=0).sample(frac=1.0).reset_index(drop=True)
+    df_valid = pd.concat([df_val_mal, df_val_fem], axis=0).sample(frac=1.0).reset_index(drop=True)
 
-    train_idx = list(df_train.index)
-    valid_idx = list(df_valid.index)
-    train_mal_idx = list(male_df[male_df.fold != fold].index)
-    valid_mal_idx = list(male_df[male_df.fold == fold].index)
-    train_fem_idx = list(female_df[female_df.fold != fold].index)
-    valid_fem_idx = list(female_df[female_df.fold == fold].index)
+    # get numpy
+    x_tr = df_train[args.feature].values
+    y_tr = df_train[args.target].values
+    z_tr = df_train[args.z].values
 
+    x_va = df_valid[args.feature].values
+    y_va = df_valid[args.target].values
+    z_va = df_valid[args.z].values
 
-    x_train, y_train, z_train = (train_df[args.feature].values, train_df[args.target].values, train_df[args.z].values)
-    x_test, y_test, z_test = (test_df[args.feature].values, test_df[args.target].values, test_df[args.z].values)
+    x_te = test_df[args.feature].values
+    y_te = test_df[args.target].values
+    z_te = test_df[args.z].values
 
-    if args.mode == 'fairrr':
-        print('='*10 + ' Applying FairRR ' + '='*10)
-        x_train = fairRR(args=args, arr=x_train, y=y_train, z=z_train)
-        x_test = fairRR(args=args, arr=x_test, y=y_test, z=z_test)
-        print('=' *10 + ' Done FairRR ' + '=' * 10)
+    x_fem_te = fem_te_df[args.feature].values
+    y_fem_te = fem_te_df[args.target].values
+    z_fem_te = fem_te_df[args.z].values
 
-    print("Len x_train", len(x_train))
-    print("Len x_test", len(x_test))
-    
+    x_mal_te = mal_te_df[args.feature].values
+    y_mal_te = mal_te_df[args.target].values
+    z_mal_te = mal_te_df[args.z].values
+
+    if args.submode == 'fairrr':
+        print('=' * 10 + ' Applying FairRR ' + '=' * 10)
+        x_tr = fairRR(args=args, arr=x_tr)
+        x_va = fairRR(args=args, arr=x_va)
+        x_te = fairRR(args=args, arr=x_te)
+        x_fem_te = fairRR(args=args, arr=x_fem_te)
+        x_mal_te = fairRR(args=args, arr=x_mal_te)
+        print('=' * 10 + ' Done FairRR ' + '=' * 10)
+
     # Defining DataSet
-    train_male_dataset = Data(
-        X=x_train[train_mal_idx, :],
-        y=y_train[train_mal_idx],
-        ismale=z_train[train_mal_idx]
-    )
 
-    train_female_dataset = Data(
-        X=x_train[train_fem_idx, :],
-        y=y_train[train_fem_idx],
-        ismale=z_train[train_fem_idx]
-    )
+    ## train
+    train_dataset = Data(X=x_tr, y=y_tr, ismale=z_tr)
+    ## valid
+    valid_dataset = Data(X=x_va, y=y_va, ismale=z_va)
 
-    valid_male_dataset = Data(
-        X=x_train[valid_mal_idx, :],
-        y=y_train[valid_mal_idx],
-        ismale=z_train[valid_mal_idx]
-    )
+    ## test
+    test_male_dataset = Data(X=x_mal_te, y=y_mal_te, ismale=z_mal_te)
+    test_female_dataset = Data(X=x_fem_te, y=y_fem_te, ismale=z_fem_te)
+    test_dataset = Data(X=x_te, y=y_te, ismale=z_te)
 
-    valid_female_dataset = Data(
-        X=x_train[valid_fem_idx, :],
-        y=y_train[valid_fem_idx],
-        ismale=z_train[valid_fem_idx]
-    )
+    tr_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0, shuffle=True,
+                           pin_memory=True, drop_last=True, )
 
-    train_dataset = Data(
-        X=x_train[train_idx, :],
-        y=y_train[train_idx],
-        ismale=z_train[train_idx]
-    )
+    va_loader = DataLoader(valid_dataset, batch_size=args.batch_size, num_workers=0, shuffle=False,
+                           pin_memory=True, drop_last=False)
 
-    valid_dataset = Data(
-        X=x_train[valid_idx, :],
-        y=y_train[valid_idx],
-        ismale=z_train[valid_idx]
-    )
+    te_loader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=0, shuffle=False,
+                           pin_memory=True, drop_last=False)
+    te_mal_loader = DataLoader(test_male_dataset, batch_size=args.batch_size, pin_memory=True,
+                               drop_last=False, shuffle=False, num_workers=0)
+    te_fem_loader = DataLoader(test_female_dataset, batch_size=args.batch_size, pin_memory=True,
+                               drop_last=False, shuffle=False, num_workers=0)
 
-    test_dataset = Data(
-        X=x_test,
-        y=y_test,
-        ismale=z_test
-    )
+    args.n_batch = len(tr_loader)
+    args.bs_male = args.batch_size
+    args.bs_female = args.batch_size
+    args.bs = args.batch_size
+    args.num_val_male = len(mal_te_df)
+    args.num_val_female = len(fem_te_df)
 
-    # Defining DataLoader with BalanceClass Sampler
-    # sampler_male = torch.utils.data.RandomSampler(train_male_dataset, replacement=False)
-    train_male_loader = DataLoader(
-        train_male_dataset,
-        batch_size=args.batch_size,
-        pin_memory=True,
-        drop_last=True,
-        num_workers=0
-    )
-
-    # sampler_female = torch.utils.data.RandomSampler(train_female_dataset, replacement=False)
-    train_female_loader = DataLoader(
-        train_female_dataset,
-        batch_size=args.batch_size,
-        pin_memory=True,
-        drop_last=True,
-        num_workers=0
-    )
-
-    valid_male_loader = torch.utils.data.DataLoader(
-        valid_male_dataset,
-        batch_size=args.batch_size,
-        num_workers=0,
-        shuffle=False,
-        pin_memory=True,
-        drop_last=False,
-    )
-
-    valid_female_loader = torch.utils.data.DataLoader(
-        valid_female_dataset,
-        batch_size=args.batch_size,
-        num_workers=0,
-        shuffle=False,
-        pin_memory=True,
-        drop_last=False,
-    )
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=args.batch_size,
-        num_workers=0,
-        shuffle=True,
-        pin_memory=True,
-        drop_last=True,
-    )
-
-    valid_loader = torch.utils.data.DataLoader(
-        valid_dataset,
-        batch_size=args.batch_size,
-        num_workers=0,
-        shuffle=False,
-        pin_memory=True,
-        drop_last=False,
-    )
-
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=args.batch_size,
-        num_workers=0,
-        shuffle=False,
-        pin_memory=True,
-        drop_last=False,
-    )
-    args.n_batch = len(train_male_loader)
-    args.bs_male = int(args.sampling_rate * len(train_male_dataset))
-    args.bs_female = int(args.sampling_rate * len(train_female_dataset))
-    args.bs = int(args.sampling_rate * len(train_dataset))
-    args.num_val_male = len(valid_mal_idx)
-    args.num_val_female = len(valid_fem_idx)
-    return train_loader, train_male_loader, train_female_loader, valid_male_loader, valid_female_loader, valid_loader, test_loader
+    tr_info = tr_loader
+    va_info = va_loader
+    te_info = (te_loader, te_mal_loader, te_fem_loader)
+    return tr_info, va_info, te_info
 
 
-def get_grad_vec(model, device, requires_grad=False):
-    size = 0
-    for name, layer in model.named_parameters():
-        if name == 'decoder.weight':
-            continue
-        size += layer.view(-1).shape[0]
-    if device.type == 'cpu':
-        sum_var = torch.FloatTensor(size).fill_(0)
-    else:
-        sum_var = torch.cuda.FloatTensor(size).fill_(0)
-    size = 0
-    for name, layer in model.named_parameters():
-        if name == 'decoder.weight':
-            continue
-        sum_var[size:size + layer.view(-1).shape[0]] = (layer.grad).view(-1)
-        size += layer.view(-1).shape[0]
-
-    return sum_var
-
-
-def normalize_data(args, train_df, test_df):
-    all_data = pd.concat([train_df, test_df], axis=0)
-    if args.dataset != 'adult':
-        minmax_scaler = MinMaxScaler()
-        for col in args.feature:
-            all_data[col] = minmax_scaler.fit_transform(all_data[col].values.reshape(-1, 1))
-        # all_data = minmax_scaler.fit_transform(all_data.values)
-    train_df = all_data[:train_df.shape[0]]
-    test_df = all_data[train_df.shape[0]:]
-    return train_df, test_df
+def init_history():
+    history = {
+        'tr_loss': [],
+        'tr_acc': [],
+        'va_loss': [],
+        'va_acc': [],
+        'demo_parity': [],
+        'acc_parity': [],
+        'equal_opp': [],
+        'equal_odd': [],
+        'te_loss': [],
+        'te_acc': [],
+        'best_test': 0,
+        'best_demo_parity': 0,
+        'best_acc_parity': 0,
+        'best_equal_opp': 0,
+        'best_equal_odd': 0,
+    }
+    return history

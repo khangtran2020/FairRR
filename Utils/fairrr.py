@@ -10,28 +10,27 @@ def softmax(x):
     return np.exp(x) / np.sum(np.exp(x))
 
 
-def fairRR(args, arr, y, z):
+def fairRR(args, arr):
     r = arr.shape[1]
-    print("Len y : ", len(y))
-    print("Len z : ", len(z))
+    num_pt = arr.shape[0]
 
-    def float_to_binary(x, m=args.num_int, n=args.num_bit - args.num_int - 1):
+    def float_to_binary(x, m=args.num_int, n=args.num_bit - args.num_int):
         x_abs = np.abs(x)
         x_scaled = round(x_abs * 2 ** n)
         res = '{:0{}b}'.format(x_scaled, m + n)
-        if x >= 0:
-            res = '0' + res
-        else:
-            res = '1' + res
+        # if x >= 0:
+        #     res = '0' + res
+        # else:
+        #     res = '1' + res
         return res
 
     # binary to float
-    def binary_to_float(bstr, m=args.num_int, n=args.num_bit - args.num_int - 1):
-        sign = bstr[0]
-        bs = bstr[1:]
-        res = int(bs, 2) / 2 ** n
-        if int(sign) == 1:
-            res = -1 * res
+    def binary_to_float(bstr, n=args.num_bit - args.num_int):
+        # sign = bstr[0]
+        # bs = bstr[1:]
+        res = int(bstr, 2) / 2 ** n
+        # if int(sign) == 1:
+        #     res = -1 * res
         return res
 
     def string_to_int(a):
@@ -46,43 +45,27 @@ def fairRR(args, arr, y, z):
             res[i] = "".join(str(x) for x in a[i * num_bit:(i + 1) * num_bit])
         return res
 
+    max_ = np.max(arr)
+    min_ = np.min(arr)
+    arr = (arr - min_) / (max_ - min_) * (2 ** args.num_int - 1)
+
     float_to_binary_vec = np.vectorize(float_to_binary)
     binary_to_float_vec = np.vectorize(binary_to_float)
 
-    if args.dataset != 'adult':
-        feat_tmp = float_to_binary_vec(arr)
-        feat = np.apply_along_axis(string_to_int, 1, feat_tmp)
-    else:
-        feat = arr
-    mi_protect, mi_label = cal_mi(x=feat, y=y, z=z)
-    print("mi_label : ", mi_label)
-    print("mi_protect :", mi_protect)
-    eps = softmax(mi_label - args.alpha*mi_protect)
-    print("Eps : ", eps)
-    # args.tar_eps = eps
-    print("Eps sum : ", np.sum(eps))
-    p = sigmoid(eps)
-    
-    # *args.tar_eps
-    # eps = np.exp()
-    
-    # p = sigmoid(args.tar_eps/r)*np.ones(feat.shape)
-    
-    
-    p = np.expand_dims(a=p, axis=0)
-    p = np.repeat(a=p, repeats=feat.shape[0], axis=0)
-    print("Shape of matrix:", p.shape, feat.shape)
+    feat_tmp = float_to_binary_vec(arr)
+    feat = np.apply_along_axis(string_to_int, 1, feat_tmp)
+    print(feat[0,:10])
+    index_matrix = np.array(range(args.num_bit))
+    index_matrix = np.tile(index_matrix, (num_pt, r))
+    p = np.ones_like(index_matrix)*(np.exp(args.tar_eps/(r*args.num_bit))/(1 + np.exp(args.tar_eps/(r*args.num_bit))))
+    print(p[0, :10])
     p_temp = np.random.rand(p.shape[0], p.shape[1])
     perturb = (p_temp > p).astype(int)
-
     perturb_feat = (perturb + feat) % 2
-    if args.dataset != 'adult':
-        perturb_feat = np.apply_along_axis(join_string, 1, perturb_feat)
-        perturb_feat = binary_to_float_vec(perturb_feat)
-    else:
-        perturb_feat = perturb
-
-    print("Perturb feat : ", perturb_feat)
+    print(perturb_feat[0, :10])
+    perturb_feat = np.apply_along_axis(join_string, 1, perturb_feat)
+    perturb_feat = binary_to_float_vec(perturb_feat)
+    perturb_feat = perturb_feat / (2 ** args.num_int - 1) * (max_ - min_) + min_
     return perturb_feat
 
 
