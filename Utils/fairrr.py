@@ -18,10 +18,6 @@ def fairRR(args, arr):
         x_abs = np.abs(x)
         x_scaled = round(x_abs * 2 ** n)
         res = '{:0{}b}'.format(x_scaled, m + n)
-        # if x >= 0:
-        #     res = '0' + res
-        # else:
-        #     res = '1' + res
         return res
 
     # binary to float
@@ -29,8 +25,6 @@ def fairRR(args, arr):
         # sign = bstr[0]
         # bs = bstr[1:]
         res = int(bstr, 2) / 2 ** n
-        # if int(sign) == 1:
-        #     res = -1 * res
         return res
 
     def string_to_int(a):
@@ -45,27 +39,34 @@ def fairRR(args, arr):
             res[i] = "".join(str(x) for x in a[i * num_bit:(i + 1) * num_bit])
         return res
 
+    max_val = sum([2**i for i in range(args.num_int)]) + sum([2**(-1*i) for i in range(1, args.num_bit - args.num_int)])
+    min_val = 2**(-1*(args.num_bit - args.num_int))
+
     max_ = np.max(arr)
     min_ = np.min(arr)
-    arr = (arr - min_) / (max_ - min_) * (2 ** args.num_int - 1)
-
+    arr = (arr - min_) / (max_ - min_) * (max_val - min_val) + min_val
+    # print(arr[0, :2])
     float_to_binary_vec = np.vectorize(float_to_binary)
     binary_to_float_vec = np.vectorize(binary_to_float)
 
     feat_tmp = float_to_binary_vec(arr)
+    # print(feat_tmp[0, :2])
     feat = np.apply_along_axis(string_to_int, 1, feat_tmp)
-    print(feat[0,:10])
+    # print(feat[0,:10])
     index_matrix = np.array(range(args.num_bit))
     index_matrix = np.tile(index_matrix, (num_pt, r))
+    print('Probability:', np.exp(args.tar_eps/(r*args.num_bit))/(1 + np.exp(args.tar_eps/(r*args.num_bit))))
     p = np.ones_like(index_matrix)*(np.exp(args.tar_eps/(r*args.num_bit))/(1 + np.exp(args.tar_eps/(r*args.num_bit))))
-    print(p[0, :10])
+    # print(p[0, :10])
     p_temp = np.random.rand(p.shape[0], p.shape[1])
     perturb = (p_temp > p).astype(int)
     perturb_feat = (perturb + feat) % 2
-    print(perturb_feat[0, :10])
+    # print(perturb_feat[0, :10])
     perturb_feat = np.apply_along_axis(join_string, 1, perturb_feat)
     perturb_feat = binary_to_float_vec(perturb_feat)
-    perturb_feat = perturb_feat / (2 ** args.num_int - 1) * (max_ - min_) + min_
+    # print(perturb_feat[0, :2])
+    print('Distance:', perturb_feat.shape, arr.shape, np.linalg.norm(perturb_feat - arr, ord=2))
+    perturb_feat = (perturb_feat - min_val)/ (max_val - min_val) * (max_ - min_) + min_
     return perturb_feat
 
 

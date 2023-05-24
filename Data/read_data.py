@@ -85,6 +85,7 @@ def read_adult(args):
     label = 'income'
     z = 'sex'
     for col in feature_cols: all_data[col] = (all_data[col] - all_data[col].mean())/(all_data[col].std() + 1e-12)
+    print(all_data.head())
     train_df = all_data[:train_df.shape[0]].reset_index(drop=True)
     test_df = all_data[train_df.shape[0]:].reset_index(drop=True)
     male_tr_df = train_df[train_df[z] == 1].copy().reset_index(drop=True)
