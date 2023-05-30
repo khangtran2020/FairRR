@@ -62,6 +62,18 @@ class NormNN(nn.Module):
             x_out = self.out_layer(x_in)
             return x_in, x_out
 
+
+class LR(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(LR, self).__init__()
+        self.out_layer = nn.Linear(in_features=input_dim, out_features=output_dim)
+        # if clip is not None: nn.init.uniform_(self.out_layer.weight, a=0, b=clip)
+
+    def forward(self, x):
+        h = torch.nn.functional.sigmoid(self.out_layer(x))
+        return h
+
+
     
 class SimpleCNN(nn.Module):
     def __init__(self, n_channel, n_hidden, num_out):

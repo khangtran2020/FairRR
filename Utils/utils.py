@@ -41,51 +41,57 @@ def init_model(args):
         return NormNN(args.input_dim, args.n_hid, args.output_dim, n_layer=args.n_layer, dropout=None)
     elif args.model_type == 'NN':
         return NN(args.input_dim, args.n_hid, args.output_dim, n_layer=args.n_layer)
+    elif args.model_type == 'LR':
+        return LR(args.input_dim, args.output_dim)
     elif args.model_type == 'SimpleCNN':
         print(args.input_dim, args.n_hid, args.output_dim)
         return SimpleCNN(args.input_dim, args.n_hid, args.output_dim)
 
 
 def init_data(args, fold, train, test):
-    mal_tr_df, fem_tr_df = train
-    test_df, mal_te_df, fem_te_df = test
+    train_df = train
+    test_df = test
 
-    df_train_mal = mal_tr_df[mal_tr_df.fold != fold]
-    df_train_fem = fem_tr_df[fem_tr_df.fold != fold]
-    df_val_mal = mal_tr_df[mal_tr_df.fold == fold]
-    df_val_fem = fem_tr_df[fem_tr_df.fold == fold]
-    df_train = pd.concat([df_train_mal, df_train_fem], axis=0).sample(frac=1.0).reset_index(drop=True)
-    df_valid = pd.concat([df_val_mal, df_val_fem], axis=0).sample(frac=1.0).reset_index(drop=True)
-
-    # get numpy
-    x_tr = df_train[args.feature].values
-    y_tr = df_train[args.target].values
-    z_tr = df_train[args.z].values
-
-    x_va = df_valid[args.feature].values
-    y_va = df_valid[args.target].values
-    z_va = df_valid[args.z].values
-
-    x_te = test_df[args.feature].values
-    y_te = test_df[args.target].values
-    z_te = test_df[args.z].values
-
-    x_fem_te = fem_te_df[args.feature].values
-    y_fem_te = fem_te_df[args.target].values
-    z_fem_te = fem_te_df[args.z].values
-
-    x_mal_te = mal_te_df[args.feature].values
-    y_mal_te = mal_te_df[args.target].values
-    z_mal_te = mal_te_df[args.z].values
+    df_train = train_df[train_df.fold != fold]
+    df_valid = train_df[train_df.fold == fold]
 
     if args.submode == 'fairrr':
         print('=' * 10 + ' Applying FairRR ' + '=' * 10)
-        x_tr = fairRR(args=args, arr=x_tr)
-        x_va = fairRR(args=args, arr=x_va)
-        x_te = fairRR(args=args, arr=x_te)
-        x_fem_te = fairRR(args=args, arr=x_fem_te)
-        x_mal_te = fairRR(args=args, arr=x_mal_te)
+        # args, df, mode = 'train', ignore_co = None, random_co = None, eps_dict = None
+
+        tr_df, cols, epsilon, mean_dct = fairRR(args=args, df=df_train, mode='train')
+        for col in args.feature:
+            print(col, df_train[col].std(), tr_df[col].std())
+        ignore_col, random_col = cols
+        va_df = fairRR(args=args, df=df_valid, mode='val', ignore_co=ignore_col, random_co=random_col,
+                       eps_dict=epsilon, mean_dct=mean_dct)
+        te_df = fairRR(args=args, df=test_df, mode='test', ignore_co=ignore_col, random_co=random_col,
+                       eps_dict=epsilon, mean_dct=mean_dct)
         print('=' * 10 + ' Done FairRR ' + '=' * 10)
+
+    male_te_df = te_df[te_df[args.z] == 1].copy().reset_index(drop=True)
+    female_te_df = te_df[te_df[args.z] == 0].copy().reset_index(drop=True)
+
+    # get numpy
+    x_tr = tr_df[args.feature].values
+    y_tr = tr_df[args.target].values
+    z_tr = tr_df[args.z].values
+
+    x_va = va_df[args.feature].values
+    y_va = va_df[args.target].values
+    z_va = va_df[args.z].values
+
+    x_te = te_df[args.feature].values
+    y_te = te_df[args.target].values
+    z_te = te_df[args.z].values
+
+    x_fem_te = female_te_df[args.feature].values
+    y_fem_te = female_te_df[args.target].values
+    z_fem_te = female_te_df[args.z].values
+
+    x_mal_te = male_te_df[args.feature].values
+    y_mal_te = male_te_df[args.target].values
+    z_mal_te = male_te_df[args.z].values
 
     # Defining DataSet
 
@@ -116,8 +122,8 @@ def init_data(args, fold, train, test):
     args.bs_male = args.batch_size
     args.bs_female = args.batch_size
     args.bs = args.batch_size
-    args.num_val_male = len(mal_te_df)
-    args.num_val_female = len(fem_te_df)
+    args.num_val_male = len(male_te_df)
+    args.num_val_female = len(female_te_df)
 
     tr_info = tr_loader
     va_info = va_loader

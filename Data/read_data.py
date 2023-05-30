@@ -84,20 +84,16 @@ def read_adult(args):
     feature_cols.remove('sex')
     label = 'income'
     z = 'sex'
-    for col in feature_cols: all_data[col] = (all_data[col] - all_data[col].mean())/(all_data[col].std() + 1e-12)
-    print(all_data.head())
     train_df = all_data[:train_df.shape[0]].reset_index(drop=True)
     test_df = all_data[train_df.shape[0]:].reset_index(drop=True)
     male_tr_df = train_df[train_df[z] == 1].copy().reset_index(drop=True)
     female_tr_df = train_df[train_df[z] == 0].copy().reset_index(drop=True)
-    male_te_df = test_df[test_df[z] == 1].copy().reset_index(drop=True)
-    female_te_df = test_df[test_df[z] == 0].copy().reset_index(drop=True)
     fold_separation(male_tr_df, args.folds, feature_cols, label)
     fold_separation(female_tr_df, args.folds, feature_cols, label)
     if args.submode == 'ratio':
         male_tr_df, female_tr_df = choose_data(args=args, df_0=male_tr_df, df_1=female_tr_df)
     train_df = pd.concat([male_tr_df, female_tr_df], axis=0).sample(frac=1).reset_index(drop=True)
-    return train_df, test_df, male_tr_df, female_tr_df, male_te_df, female_te_df, feature_cols, label, z
+    return train_df, test_df, feature_cols, label, z
 
 def read_bank(args):
     # 3305
@@ -110,7 +106,6 @@ def read_bank(args):
     feature_cols.remove('intercept')
     label = 'y'
     z = 'z'
-    for col in feature_cols: df[col] = (df[col] - df[col].mean()) / (df[col].std() + 1e-12)
     train_df = df[df['is_train'] == 1].reset_index(drop=True)
     test_df = df[df['is_train'] == 0].reset_index(drop=True)
     male_tr_df = train_df[train_df[z] == 1].copy().reset_index(drop=True)
@@ -122,7 +117,7 @@ def read_bank(args):
     if args.submode == 'ratio':
         male_tr_df, female_tr_df = choose_data(args=args, df_0=male_tr_df, df_1=female_tr_df)
     train_df = pd.concat([male_tr_df, female_tr_df], axis=0).sample(frac=1).reset_index(drop=True)
-    return train_df, test_df, male_tr_df, female_tr_df, male_te_df, female_te_df, feature_cols, label, z
+    return train_df, test_df, male_te_df, female_te_df, feature_cols, label, z
 
 def read_abalone(args):
     # 1436
@@ -147,7 +142,7 @@ def read_abalone(args):
     if args.submode == 'ratio':
         male_tr_df, female_tr_df = choose_data(args=args, df_0=male_tr_df, df_1=female_tr_df)
     train_df = pd.concat([male_tr_df, female_tr_df], axis=0).sample(frac=1).reset_index(drop=True)
-    return train_df, test_df, male_tr_df, female_tr_df, male_te_df, female_te_df, feature_cols, label, z
+    return train_df, test_df, male_te_df, female_te_df, feature_cols, label, z
 
 def read_utk(args):
     df = pd.read_csv('Data/UTK/feat.zip', compression='zip')
@@ -169,7 +164,7 @@ def read_utk(args):
     if args.submode == 'ratio':
         male_tr_df, female_tr_df = choose_data(args=args, df_0=male_tr_df, df_1=female_tr_df)
     train_df = pd.concat([male_tr_df, female_tr_df], axis=0).sample(frac=1).reset_index(drop=True)
-    return train_df, test_df, male_tr_df, female_tr_df, male_te_df, female_te_df, feature_cols, label, z
+    return train_df, test_df, male_te_df, female_te_df, feature_cols, label, z
 
 def fold_separation(train_df, folds, feat_cols, label):
     skf = StratifiedKFold(n_splits=folds)

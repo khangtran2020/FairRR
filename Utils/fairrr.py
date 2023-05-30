@@ -10,65 +10,81 @@ def softmax(x):
     return np.exp(x) / np.sum(np.exp(x))
 
 
-def fairRR(args, arr):
-    r = arr.shape[1]
-    num_pt = arr.shape[0]
+def fairRR(args, df, mode='train', ignore_co = None, random_co=None, eps_dict = None, mean_dct = None):
+    temp_df = df.copy()
+    if mode == 'train':
+        # calculate mutual information with label
+        num_pt = df.shape[0]
+        mean_dict = {}
+        col_dict = []
+        for col in args.feature:
+            col_dict.append((col, mutual_info_score(labels_true=temp_df[args.target], labels_pred=temp_df[col])))
+            mean_dict[col] = temp_df[col].mean()
+        col_dict = sorted(col_dict, key=lambda x: x[1])
+        cols = np.array([col[1] for col in col_dict])
+        # print(cols)
+        total_mi = np.sum(cols)
+        cols = (np.abs(np.cumsum(cols) - total_mi)) / (np.abs(np.cumsum(cols)) + total_mi)
+        # print(cols)
+        ignore_col = [col_dict[i][0] for i, col in enumerate(cols) if col > 0.5]
+        randomize_col = [col for col in args.feature if col not in ignore_col]
+        # randomize ignored columns
+        for col in ignore_col:
+            if temp_df[col].nunique() > 2:
+                temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=0, valdict=args.valdict[col])
+            else:
+                temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=0, mean=mean_dict[col])
 
-    def float_to_binary(x, m=args.num_int, n=args.num_bit - args.num_int):
-        x_abs = np.abs(x)
-        x_scaled = round(x_abs * 2 ** n)
-        res = '{:0{}b}'.format(x_scaled, m + n)
-        return res
+        # randomize best columns
+        total_mi = 0.0
+        min_mi = 1e12
+        for col in randomize_col:
+            min_mi = min(min_mi, mutual_info_score(labels_true=temp_df[args.target], labels_pred=temp_df[col]))
+        for col in randomize_col:
+            total_mi += np.exp(mutual_info_score(labels_true=temp_df[args.target], labels_pred=temp_df[col]) - min_mi)
+        epsilon = {}
+        for col in randomize_col:
+            mi = mutual_info_score(labels_true=temp_df[args.target], labels_pred=temp_df[col])
+            eps = args.tar_eps * np.exp(mi-min_mi)/total_mi
+            print(col, eps)
+            epsilon[col] = eps
+            if temp_df[col].nunique() > 2:
+                temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=eps, valdict=args.valdict[col])
+            else:
+                temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=eps, mean=mean_dict[col])
+        cols = (ignore_col, randomize_col)
+        return temp_df, cols, epsilon, mean_dict
+    else:
+        # print(eps_dict)
+        for col in ignore_co:
+            if temp_df[col].nunique() > 2:
+                temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=0, valdict=args.valdict[col])
+            else:
+                temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=0, mean=mean_dct[col])
 
-    # binary to float
-    def binary_to_float(bstr, n=args.num_bit - args.num_int):
-        # sign = bstr[0]
-        # bs = bstr[1:]
-        res = int(bstr, 2) / 2 ** n
-        return res
+        for col in random_co:
+            eps = eps_dict[col]
+            if temp_df[col].nunique() > 2:
+                temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=eps, valdict=args.valdict[col])
+            else:
+                temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=eps, mean=mean_dct[col])
+        return temp_df
 
-    def string_to_int(a):
-        bit_str = "".join(x for x in a)
-        return np.array(list(bit_str)).astype(int)
 
-    def join_string(a, num_bit=args.num_bit, num_feat=r):
-        res = np.empty(num_feat, dtype="S10")
-        # res = []
-        for i in range(num_feat):
-            # res.append("".join(str(x) for x in a[i*l:(i+1)*l]))
-            res[i] = "".join(str(x) for x in a[i * num_bit:(i + 1) * num_bit])
-        return res
+def random_bin(arr, epsilon, mean):
+    temp = np.random.uniform(low=0.0, high=1.0, size=arr.shape)
+    if epsilon == 0:
+        temp = (temp > 0.5).astype(int)
+        alpha = mean/(0.5*mean + 0.5*(1-mean))
+    else:
+        p = np.exp(epsilon)/(1 + np.exp(epsilon))
+        alpha = mean / (p * mean + (1-p) * (1 - mean))
+        temp = (temp > p).astype(int)
+    perturbed = ((temp + arr) % 2).astype(int)
+    return perturbed*alpha
 
-    max_val = sum([2**i for i in range(args.num_int)]) + sum([2**(-1*i) for i in range(1, args.num_bit - args.num_int)])
-    min_val = 2**(-1*(args.num_bit - args.num_int))
-
-    max_ = np.max(arr)
-    min_ = np.min(arr)
-    arr = (arr - min_) / (max_ - min_) * (max_val - min_val) + min_val
-    # print(arr[0, :2])
-    float_to_binary_vec = np.vectorize(float_to_binary)
-    binary_to_float_vec = np.vectorize(binary_to_float)
-
-    feat_tmp = float_to_binary_vec(arr)
-    # print(feat_tmp[0, :2])
-    feat = np.apply_along_axis(string_to_int, 1, feat_tmp)
-    # print(feat[0,:10])
-    index_matrix = np.array(range(args.num_bit))
-    index_matrix = np.tile(index_matrix, (num_pt, r))
-    print('Probability:', np.exp(args.tar_eps/(r*args.num_bit))/(1 + np.exp(args.tar_eps/(r*args.num_bit))))
-    p = np.ones_like(index_matrix)*(np.exp(args.tar_eps/(r*args.num_bit))/(1 + np.exp(args.tar_eps/(r*args.num_bit))))
-    # print(p[0, :10])
-    p_temp = np.random.rand(p.shape[0], p.shape[1])
-    perturb = (p_temp > p).astype(int)
-    perturb_feat = (perturb + feat) % 2
-    # print(perturb_feat[0, :10])
-    perturb_feat = np.apply_along_axis(join_string, 1, perturb_feat)
-    perturb_feat = binary_to_float_vec(perturb_feat)
-    # print(perturb_feat[0, :2])
-    print('Distance:', perturb_feat.shape, arr.shape, np.linalg.norm(perturb_feat - arr, ord=2))
-    perturb_feat = (perturb_feat - min_val)/ (max_val - min_val) * (max_ - min_) + min_
-    return perturb_feat
-
+def random_bucket(arr, epsilon, valdict):
+    pass
 
 def cal_mi(x, y, z):
     mi_protect = []
