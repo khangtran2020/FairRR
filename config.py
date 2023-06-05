@@ -6,17 +6,19 @@ def add_general_group(group):
     group.add_argument("--plot_path", type=str, default="results/plot/", help="dir path for plots file")
     group.add_argument("--seed", type=int, default=2605, help="seed value")
     group.add_argument("--mode", type=str, default='clean', help="Mode of running ['clean']")
-    group.add_argument("--submode", type=str, default='clean', help="Mode of running ['clean', 'fairrr']")
+    group.add_argument("--submode", type=str, default='fairrr', help="Mode of running ['clean', 'fairrr']")
     group.add_argument("--performance_metric", type=str, default='acc', help="['acc', 'f1', 'auc', 'pre']")
 
 
 def add_data_group(group):
     group.add_argument('--dataset', type=str, default='adult', help="name of dataset")
     group.add_argument('--folds', type=int, default=5, help='number of folds for cross-validation')
-    group.add_argument('--ratio', type=float, default=0.5, help="ratio group0/group1")
+    group.add_argument('--ratio', type=float, default=0.0, help="ratio group0/group1")
     group.add_argument('--max_val', type=float, default=1.0, help="maximum value for dataset")
     group.add_argument('--min_val', type=float, default=0.0, help="minimum value for dataset")
     group.add_argument('--num_class', type=int, default=2, help="label space")
+    group.add_argument('--n_comp', type=int, default=20, help="pca dimension")
+    group.add_argument('--n_bin', type=int, default=5, help="max # of bucket")
 
 def add_model_group(group):
     group.add_argument("--model_type", type=str, default='Logit', help="Model type")

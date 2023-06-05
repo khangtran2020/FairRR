@@ -8,7 +8,7 @@ from Models.models import *
 from torch.utils.data import DataLoader
 from Data.datasets import Data
 import pandas as pd
-from Utils.fairrr import fairRR
+from Utils.fairrr import fairRR, fairRR_org
 
 
 def save_res(args, dct, name):
@@ -59,39 +59,102 @@ def init_data(args, fold, train, test):
         print('=' * 10 + ' Applying FairRR ' + '=' * 10)
         # args, df, mode = 'train', ignore_co = None, random_co = None, eps_dict = None
 
-        tr_df, cols, epsilon, mean_dct = fairRR(args=args, df=df_train, mode='train')
+        tr_df, epsilon, re_dict = fairRR(args=args, df=df_train, mode='train')
+        mean_dict, mean_sqrt_dict, val_dict = re_dict
+        va_df = fairRR(args=args, df=df_valid, mode='val', eps = epsilon, dct = val_dict)
+        te_df = fairRR(args=args, df=test_df, mode='test', eps = epsilon, dct = val_dict)
+
+        # normalizing
         for col in args.feature:
-            print(col, df_train[col].std(), tr_df[col].std())
-        ignore_col, random_col = cols
-        va_df = fairRR(args=args, df=df_valid, mode='val', ignore_co=ignore_col, random_co=random_col,
-                       eps_dict=epsilon, mean_dct=mean_dct)
-        te_df = fairRR(args=args, df=test_df, mode='test', ignore_co=ignore_col, random_co=random_col,
-                       eps_dict=epsilon, mean_dct=mean_dct)
+            u0 = tr_df[col].mean()
+            u1 = mean_dict[col]
+            u2 = tr_df[col].apply(lambda x: x**2).mean()
+            u3 = mean_sqrt_dict[col]
+            alpha = np.sqrt((u3 - u1**2)/(u2 - u0**2))
+            beta = u1 - u0*alpha
+            tr_df[col] = alpha*tr_df[col] + beta
+
+            u0 = va_df[col].mean()
+            u2 = va_df[col].apply(lambda x: x ** 2).mean()
+            alpha = np.sqrt((u3 - u1 ** 2) / (u2 - u0 ** 2))
+            beta = u1 - u0 * alpha
+            va_df[col] = alpha * va_df[col] + beta
+
+            u0 = te_df[col].mean()
+            u2 = te_df[col].apply(lambda x: x ** 2).mean()
+            alpha = np.sqrt((u3 - u1 ** 2) / (u2 - u0 ** 2))
+            beta = u1 - u0 * alpha
+            te_df[col] = alpha * te_df[col] + beta
+
         print('=' * 10 + ' Done FairRR ' + '=' * 10)
 
-    male_te_df = te_df[te_df[args.z] == 1].copy().reset_index(drop=True)
-    female_te_df = te_df[te_df[args.z] == 0].copy().reset_index(drop=True)
+        all_data = pd.concat([tr_df, va_df, te_df], axis = 0)
+        for col in args.feature:
+            all_data[col] = (all_data[col] - all_data[col].mean())/(all_data[col].std() + 1e-12)
+
+        tr_df = all_data[:tr_df.shape[0]]
+        va_df = all_data[tr_df.shape[0]:tr_df.shape[0] + va_df.shape[0]]
+        te_df = all_data[tr_df.shape[0] + va_df.shape[0]:]
+
+        male_te_df = te_df[te_df[args.z] == 1].copy().reset_index(drop=True)
+        female_te_df = te_df[te_df[args.z] == 0].copy().reset_index(drop=True)
+
+        x_tr = tr_df[args.feature].values
+        y_tr = tr_df[args.target].values
+        z_tr = tr_df[args.z].values
+
+        x_va = va_df[args.feature].values
+        y_va = va_df[args.target].values
+        z_va = va_df[args.z].values
+
+        x_te = te_df[args.feature].values
+        y_te = te_df[args.target].values
+        z_te = te_df[args.z].values
+
+        x_fem_te = female_te_df[args.feature].values
+        y_fem_te = female_te_df[args.target].values
+        z_fem_te = female_te_df[args.z].values
+
+        x_mal_te = male_te_df[args.feature].values
+        y_mal_te = male_te_df[args.target].values
+        z_mal_te = male_te_df[args.z].values
+    else:
+
+        male_te_df = test_df[test_df[args.z] == 1].copy().reset_index(drop=True)
+        female_te_df = test_df[test_df[args.z] == 0].copy().reset_index(drop=True)
+
+        x_tr = df_train[args.feature].values
+        y_tr = df_train[args.target].values
+        z_tr = df_train[args.z].values
+
+        x_va = df_valid[args.feature].values
+        y_va = df_valid[args.target].values
+        z_va = df_valid[args.z].values
+
+        x_te = test_df[args.feature].values
+        y_te = test_df[args.target].values
+        z_te = test_df[args.z].values
+
+        x_fem_te = female_te_df[args.feature].values
+        y_fem_te = female_te_df[args.target].values
+        z_fem_te = female_te_df[args.z].values
+
+        x_mal_te = male_te_df[args.feature].values
+        y_mal_te = male_te_df[args.target].values
+        z_mal_te = male_te_df[args.z].values
+
+        print('=' * 10 + ' Applying FairRR ' + '=' * 10)
+        # (args, arr, y, z)
+        x_tr = fairRR_org(args=args, arr=x_tr, y=y_tr, z=z_tr)
+        x_va = fairRR_org(args=args, arr=x_va, y=y_va, z=z_va)
+        x_te = fairRR_org(args=args, arr=x_te, y=y_te, z=z_te)
+        x_mal_te = fairRR_org(args=args, arr=x_mal_te, y=y_mal_te, z=z_mal_te)
+        x_fem_te = fairRR_org(args=args, arr=x_fem_te, y=y_fem_te, z=z_fem_te)
+        print('=' * 10 + ' Done FairRR ' + '=' * 10)
+
 
     # get numpy
-    x_tr = tr_df[args.feature].values
-    y_tr = tr_df[args.target].values
-    z_tr = tr_df[args.z].values
 
-    x_va = va_df[args.feature].values
-    y_va = va_df[args.target].values
-    z_va = va_df[args.z].values
-
-    x_te = te_df[args.feature].values
-    y_te = te_df[args.target].values
-    z_te = te_df[args.z].values
-
-    x_fem_te = female_te_df[args.feature].values
-    y_fem_te = female_te_df[args.target].values
-    z_fem_te = female_te_df[args.z].values
-
-    x_mal_te = male_te_df[args.feature].values
-    y_mal_te = male_te_df[args.target].values
-    z_mal_te = male_te_df[args.z].values
 
     # Defining DataSet
 

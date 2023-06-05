@@ -4,8 +4,8 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
-from Data.datasets import Data
-from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
+from optbinning import OptimalBinning
 
 
 def read_adult(args):
@@ -84,13 +84,33 @@ def read_adult(args):
     feature_cols.remove('sex')
     label = 'income'
     z = 'sex'
+    if args.submode == 'fairrr':
+        pca = PCA(n_components=args.n_comp)
+        X = pca.fit_transform(all_data[feature_cols].values)
+        all_data = all_data.drop(feature_cols, axis=1)
+        for i in range(X.shape[1]):
+            all_data[f'pca_{i}'] = X[:, i]
+        feature_cols = list(all_data.columns)
+        feature_cols.remove('income')
+        feature_cols.remove('sex')
+        scaler = MinMaxScaler()
+        for col in feature_cols:
+            all_data[col] = scaler.fit_transform(all_data[col].values.reshape(-1, 1))
     train_df = all_data[:train_df.shape[0]].reset_index(drop=True)
     test_df = all_data[train_df.shape[0]:].reset_index(drop=True)
+    for col in feature_cols:
+        optb = OptimalBinning(name=col, dtype="numerical", max_n_bins=args.n_bin, solver="cp")
+        x = train_df[col].values
+        x_ = test_df[col].values
+        y = train_df[label].values
+        optb.fit(x, y)
+        train_df[col] = optb.transform(x, metric="indices")
+        test_df[col] = optb.transform(x_, metric="indices")
     male_tr_df = train_df[train_df[z] == 1].copy().reset_index(drop=True)
     female_tr_df = train_df[train_df[z] == 0].copy().reset_index(drop=True)
     fold_separation(male_tr_df, args.folds, feature_cols, label)
     fold_separation(female_tr_df, args.folds, feature_cols, label)
-    if args.submode == 'ratio':
+    if args.ratio != 0.0:
         male_tr_df, female_tr_df = choose_data(args=args, df_0=male_tr_df, df_1=female_tr_df)
     train_df = pd.concat([male_tr_df, female_tr_df], axis=0).sample(frac=1).reset_index(drop=True)
     return train_df, test_df, feature_cols, label, z
