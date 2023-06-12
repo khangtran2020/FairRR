@@ -32,11 +32,11 @@ def fairRR_v1(args, df, mode='train', ignore_co = None, random_co=None, eps_dict
         ignore_col = [col_dict[i][0] for i, col in enumerate(cols) if col > 0.5]
         randomize_col = [col for col in args.feature if col not in ignore_col]
         # randomize ignored columns
-        for col in ignore_col:
-            if temp_df[col].nunique() > 2:
-                temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=0, valdict=args.valdict[col])
-            else:
-                temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=0, mean=mean_dict[col])
+        # for col in ignore_col:
+        #     if temp_df[col].nunique() > 2:
+        #         temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=0, valdict=args.valdict[col])
+        #     else:
+        #         temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=0, mean=mean_dict[col])
 
         # randomize best columns
         total_mi = 0.0
@@ -49,21 +49,21 @@ def fairRR_v1(args, df, mode='train', ignore_co = None, random_co=None, eps_dict
         for col in randomize_col:
             mi = mutual_info_score(labels_true=temp_df[args.target], labels_pred=temp_df[col])
             eps = args.tar_eps * np.exp(mi-min_mi)/total_mi
-            print(col, eps)
             epsilon[col] = eps
             if temp_df[col].nunique() > 2:
                 temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=eps, valdict=args.valdict[col])
             else:
                 temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=eps, mean=mean_dict[col])
         cols = (ignore_col, randomize_col)
+        temp_df = temp_df.drop(ignore_col, axis=1)
         return temp_df, cols, epsilon, mean_dict
     else:
         # print(eps_dict)
-        for col in ignore_co:
-            if temp_df[col].nunique() > 2:
-                temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=0, valdict=args.valdict[col])
-            else:
-                temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=0, mean=mean_dct[col])
+        # for col in ignore_co:
+        #     if temp_df[col].nunique() > 2:
+        #         temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=0, valdict=args.valdict[col])
+        #     else:
+        #         temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=0, mean=mean_dct[col])
 
         for col in random_co:
             eps = eps_dict[col]
@@ -71,6 +71,7 @@ def fairRR_v1(args, df, mode='train', ignore_co = None, random_co=None, eps_dict
                 temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=eps, valdict=args.valdict[col])
             else:
                 temp_df[col] = random_bin(arr=temp_df[col].values, epsilon=eps, mean=mean_dct[col])
+        temp_df = temp_df.drop(ignore_co, axis=1)
         return temp_df
 
 def random_bin(arr, epsilon, mean):
