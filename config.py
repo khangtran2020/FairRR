@@ -21,11 +21,11 @@ def add_data_group(group):
     group.add_argument('--n_bin', type=int, default=5, help="max # of bucket")
 
 def add_model_group(group):
-    group.add_argument("--model_type", type=str, default='Logit', help="Model type")
+    group.add_argument("--model_type", type=str, default='NN', help="Model type")
     group.add_argument("--lr", type=float, default=0.02, help="learning rate")
     group.add_argument('--batch_size', type=int, default=512, help="batch size for training process")
-    group.add_argument('--n_hid', type=int, default=32, help='number hidden embedding dim')
-    group.add_argument('--n_layer', type=int, default=4, help='number of layer')
+    group.add_argument('--n_hid', type=int, default=16, help='number hidden embedding dim')
+    group.add_argument('--n_layer', type=int, default=2, help='number of layer')
     group.add_argument("--alpha", type=float, default=0.05)
     group.add_argument("--optimizer", type=str, default='adam')
     group.add_argument("--epochs", type=int, default=100, help='training step')

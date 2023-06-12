@@ -118,8 +118,7 @@ def init_data(args, fold, train, test):
         x_mal_te = male_te_df[args.feature].values
         y_mal_te = male_te_df[args.target].values
         z_mal_te = male_te_df[args.z].values
-    else:
-
+    elif args.submode == 'fairrr_org':
         male_te_df = test_df[test_df[args.z] == 1].copy().reset_index(drop=True)
         female_te_df = test_df[test_df[args.z] == 0].copy().reset_index(drop=True)
 
@@ -151,7 +150,38 @@ def init_data(args, fold, train, test):
         x_mal_te = fairRR_org(args=args, arr=x_mal_te, y=y_mal_te, z=z_mal_te)
         x_fem_te = fairRR_org(args=args, arr=x_fem_te, y=y_fem_te, z=z_fem_te)
         print('=' * 10 + ' Done FairRR ' + '=' * 10)
+    else:
+        male_te_df = test_df[test_df[args.z] == 1].copy().reset_index(drop=True)
+        female_te_df = test_df[test_df[args.z] == 0].copy().reset_index(drop=True)
 
+        x_tr = df_train[args.feature].values
+        y_tr = df_train[args.target].values
+        z_tr = df_train[args.z].values
+
+        x_va = df_valid[args.feature].values
+        y_va = df_valid[args.target].values
+        z_va = df_valid[args.z].values
+
+        x_te = test_df[args.feature].values
+        y_te = test_df[args.target].values
+        z_te = test_df[args.z].values
+
+        x_fem_te = female_te_df[args.feature].values
+        y_fem_te = female_te_df[args.target].values
+        z_fem_te = female_te_df[args.z].values
+
+        x_mal_te = male_te_df[args.feature].values
+        y_mal_te = male_te_df[args.target].values
+        z_mal_te = male_te_df[args.z].values
+
+        # print('=' * 10 + ' Applying FairRR ' + '=' * 10)
+        # # (args, arr, y, z)
+        # x_tr = fairRR_org(args=args, arr=x_tr, y=y_tr, z=z_tr)
+        # x_va = fairRR_org(args=args, arr=x_va, y=y_va, z=z_va)
+        # x_te = fairRR_org(args=args, arr=x_te, y=y_te, z=z_te)
+        # x_mal_te = fairRR_org(args=args, arr=x_mal_te, y=y_mal_te, z=z_mal_te)
+        # x_fem_te = fairRR_org(args=args, arr=x_fem_te, y=y_fem_te, z=z_fem_te)
+        # print('=' * 10 + ' Done FairRR ' + '=' * 10)
 
     # get numpy
 

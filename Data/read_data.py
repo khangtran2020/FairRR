@@ -98,14 +98,15 @@ def read_adult(args):
             all_data[col] = scaler.fit_transform(all_data[col].values.reshape(-1, 1))
     train_df = all_data[:train_df.shape[0]].reset_index(drop=True)
     test_df = all_data[train_df.shape[0]:].reset_index(drop=True)
-    for col in feature_cols:
-        optb = OptimalBinning(name=col, dtype="numerical", max_n_bins=args.n_bin, solver="cp")
-        x = train_df[col].values
-        x_ = test_df[col].values
-        y = train_df[label].values
-        optb.fit(x, y)
-        train_df[col] = optb.transform(x, metric="indices")
-        test_df[col] = optb.transform(x_, metric="indices")
+    if args.submode == 'fairrr':
+        for col in feature_cols:
+            optb = OptimalBinning(name=col, dtype="numerical", max_n_bins=args.n_bin, solver="cp")
+            x = train_df[col].values
+            x_ = test_df[col].values
+            y = train_df[label].values
+            optb.fit(x, y)
+            train_df[col] = optb.transform(x, metric="indices")
+            test_df[col] = optb.transform(x_, metric="indices")
     male_tr_df = train_df[train_df[z] == 1].copy().reset_index(drop=True)
     female_tr_df = train_df[train_df[z] == 0].copy().reset_index(drop=True)
     fold_separation(male_tr_df, args.folds, feature_cols, label)
@@ -222,14 +223,24 @@ def read_lawschool(args):
         for i in range(X.shape[1]):
             df[f'pca_{i}'] = X[:, i]
         feature_cols = list(df.columns)
-        feature_cols.remove('income')
-        feature_cols.remove('sex')
+        feature_cols.remove(label)
+        feature_cols.remove(z)
         scaler = MinMaxScaler()
         for col in feature_cols:
             df[col] = scaler.fit_transform(df[col].values.reshape(-1, 1))
     train_df, test_df, _, _ = train_test_split(df, df[label], test_size=0.2, stratify=df[label])
     train_df = train_df.reset_index(drop=True)
     test_df = test_df.reset_index(drop=True)
+    if args.submode == 'fairrr':
+        for col in feature_cols:
+            optb = OptimalBinning(name=col, dtype="numerical", max_n_bins=args.n_bin, solver="cp")
+            x = train_df[col].values
+            x_ = test_df[col].values
+            y = train_df[label].values
+            optb.fit(x, y)
+            train_df[col] = optb.transform(x, metric="indices")
+            test_df[col] = optb.transform(x_, metric="indices")
+
     male_tr_df = train_df[train_df[z] == 1].copy().reset_index(drop=True)
     female_tr_df = train_df[train_df[z] == 0].copy().reset_index(drop=True)
     fold_separation(male_tr_df, args.folds, feature_cols, label)

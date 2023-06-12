@@ -1,7 +1,8 @@
 import numpy as np
+import multiprocessing
 from Utils.utils import *
 from sklearn.metrics import mutual_info_score
-from optbinning import OptimalBinning
+
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -88,9 +89,7 @@ def random_bucket(arr, epsilon, valdict):
     num_pt = arr.shape[0]
     arr = np.expand_dims(arr, axis=-1)
     pos_val = np.arange(valdict)
-    pos_val = np.tile(pos_val, (num_pt, 1))
-    temp = np.tile(arr, (1, valdict))
-    temp = np.abs(temp - pos_val)
+    temp = np.abs(arr - pos_val)
     kwargs = {"eps": epsilon, "val": valdict}
     res = np.apply_along_axis(random_choose, axis=1, arr=temp, **kwargs)
     return res
@@ -220,6 +219,7 @@ def fairRR(args, df, mode='train', eps = None, dct = None):
             mi = mutual_info_score(labels_true=temp_df[args.target], labels_pred=temp_df[col])
             eps = args.tar_eps * np.exp(mi) / total_mi
             epsilon[col] = eps
+            # print("Begin")
             temp_df[col] = random_bucket(arr=temp_df[col].values, epsilon=eps, valdict=val_dict[col])
         re_dict = (mean_dict, mean_sqrt_dict, val_dict)
         return temp_df, epsilon, re_dict
