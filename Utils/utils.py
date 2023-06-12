@@ -125,6 +125,7 @@ def init_data(args, fold, train, test):
         tr_df, cols, epsilon, mean_dict = fairRR_v1(args=args, df=df_train, mode='train')
         ignore_col, random_col = cols
         args.feature = random_col
+        args.input_dim = len(random_col)
         va_df = fairRR_v1(args=args, df=df_valid, mode='val', ignore_co=ignore_col, random_co=random_col,
                           eps_dict=epsilon, mean_dct=mean_dict)
         te_df = fairRR_v1(args=args, df=test_df, mode='test', ignore_co=ignore_col, random_co=random_col,
