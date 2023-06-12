@@ -14,6 +14,7 @@ def run(args, current_time, device):
     if args.dataset == 'adult': read_dat = read_adult
     elif args.dataset == 'abalone': read_dat = read_abalone
     elif args.dataset == 'bank': read_dat = read_bank
+    elif args.dataset == 'lawschool': read_dat = read_lawschool
     else: read_dat = read_utk
     train_df, test_df, feature_cols, label, z = read_dat(args)
     args.feature = feature_cols

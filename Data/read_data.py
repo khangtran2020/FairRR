@@ -6,7 +6,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
 from optbinning import OptimalBinning
-
+from sklearn.model_selection import train_test_split
 
 def read_adult(args):
     header = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
@@ -186,6 +186,59 @@ def read_utk(args):
     train_df = pd.concat([male_tr_df, female_tr_df], axis=0).sample(frac=1).reset_index(drop=True)
     return train_df, test_df, male_te_df, female_te_df, feature_cols, label, z
 
+
+def read_lawschool(args):
+    df = pd.read_stata('Data/Lawschool/lawschs1_1.dta')
+    df.drop(['enroll', 'asian', 'black', 'hispanic', 'white', 'missingrace', 'urm'], axis=1, inplace=True)
+    df.dropna(axis=0, inplace=True, subset=['admit'])
+    df.replace(to_replace='', value=np.nan, inplace=True)
+    df.dropna(axis=0, inplace=True)
+    df = df[df['race'] != 'Asian']
+    feature_cols = list(df.columns)
+    feature_cols.remove('gender')
+    categorical_columns = []
+    for col in feature_cols:
+        if df[col].isnull().sum() > 0:
+            df.drop(col, axis=1, inplace=True)
+        else:
+            if df[col].dtype == np.object:
+                categorical_columns.append(col)
+            else:
+                df[col] = (df[col] - df[col].mean())/(df[col].std() + 1e-12)
+    df['race'] = df['race'].apply(lambda x: int(x != 'White'))
+    categorical_columns.remove('race')
+    df = pd.get_dummies(df, columns=categorical_columns, prefix_sep='=')
+    feature_cols = list(df.columns)
+    feature_cols.remove('admit')
+    feature_cols.remove('race')
+    label = 'admit'
+    z = 'race'
+    df[label] = df[label].values.astype(int)
+    df[z] = df[z].values.astype(int)
+    if args.submode == 'fairrr':
+        pca = PCA(n_components='mle')
+        X = pca.fit_transform(df[feature_cols].values)
+        df = df.drop(feature_cols, axis=1)
+        for i in range(X.shape[1]):
+            df[f'pca_{i}'] = X[:, i]
+        feature_cols = list(df.columns)
+        feature_cols.remove('income')
+        feature_cols.remove('sex')
+        scaler = MinMaxScaler()
+        for col in feature_cols:
+            df[col] = scaler.fit_transform(df[col].values.reshape(-1, 1))
+    train_df, test_df, _, _ = train_test_split(df, df[label], test_size=0.2, stratify=df[label])
+    train_df = train_df.reset_index(drop=True)
+    test_df = test_df.reset_index(drop=True)
+    male_tr_df = train_df[train_df[z] == 1].copy().reset_index(drop=True)
+    female_tr_df = train_df[train_df[z] == 0].copy().reset_index(drop=True)
+    fold_separation(male_tr_df, args.folds, feature_cols, label)
+    fold_separation(female_tr_df, args.folds, feature_cols, label)
+    if args.submode == 'ratio':
+        male_tr_df, female_tr_df = choose_data(args=args, df_0=male_tr_df, df_1=female_tr_df)
+    train_df = pd.concat([male_tr_df, female_tr_df], axis=0).sample(frac=1).reset_index(drop=True)
+    return train_df, test_df, feature_cols, label, z
+
 def fold_separation(train_df, folds, feat_cols, label):
     skf = StratifiedKFold(n_splits=folds)
     train_df['fold'] = np.zeros(train_df.shape[0])
@@ -218,3 +271,4 @@ def choose_data(args, df_0, df_1):
         idx = np.random.choice(np.arange(len(df_1)), size=num_pt, replace=False)
         df_1 = df_1.iloc[idx, :].copy()
         return df_0.reset_index(drop=True), df_1.reset_index(drop=True)
+
